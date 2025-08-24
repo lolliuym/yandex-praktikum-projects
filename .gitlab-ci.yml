@@ -1,62 +1,37 @@
+# .gitlab-ci.yml (в корне)
 stages:
   - module-pipelines
-  - prepare
 
-frontend:
+frontend-pipeline:
   stage: module-pipelines
   trigger:
-    include: "/frontend/.gitlab-ci.yml"
+    include: frontend/.gitlab-ci.yml
     strategy: depend
-  only:
-    changes:
-      - frontend/**/*
+  rules:
+    - changes:
+        - frontend/**/*
+        - kubernetes/frontend/**
 
 
 
-backend:
+backend-pipeline:
   stage: module-pipelines
   trigger:
-    include: "/backend/.gitlab-ci.yml"
+    include: backend/.gitlab-ci.yml
     strategy: depend
-  only:
-    changes:
-      - backend/**/*
+  rules:
+    - changes:
+        - backend/**/*
+        - kubernetes/backend/**
 
-backend-report:
+backend-report-pipeline:
   stage: module-pipelines
   trigger:
-    include: "/backend-report/.gitlab-ci.yml"
+    include: backend-report/.gitlab-ci.yml
     strategy: depend
-  only:
-    changes:
-      - backend-report/**/*
+  rules:
+    - changes:
+        - backend-report/**/*
+        - kubernetes/backend-report/**
 
-
-# prepare_files:
-#   stage: prepare
-#   image: alpine:latest
-#   script:
-#     - 'echo "Копируем docker-compose.yml и deploy.sh на сервер"'
-#     - apk add --no-cache openssh-client bash
-#     - eval $(ssh-agent -s)
-#     - echo "$SSH_PRIVATE_KEY_DEPLOY" | tr -d '\r' | ssh-add -
-#     - mkdir -p ~/.ssh
-#     - chmod 700 ~/.ssh
-#     - echo "$SSH_KNOWN_HOSTS_DEPLOY" > ~/.ssh/known_hosts
-#     - chmod 600 ~/.ssh/known_hosts
-
-#     # Создаём директорию на сервере
-#     - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "mkdir -p tmp${CI_PROJECT_DIR}"
-
-#     # Копируем docker-compose.yml и backend/deploy.sh
-#     - scp ./docker-compose.yml ${DEPLOY_USER}@${DEPLOY_HOST}:/tmp${CI_PROJECT_DIR}.
-#     - scp ./deploy.sh ${DEPLOY_USER}@${DEPLOY_HOST}:/tmp${CI_PROJECT_DIR}/deploy.sh
-
-#     # Делаем скрипт исполняемым
-#     - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "chmod +x /tmp/tmp${CI_PROJECT_DIR}/deploy.sh"
-#     - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "/tmp${CI_PROJECT_DIR}/deploy.sh ${DOCKER_IMAGE_NAME} ${VERSION} ${CI_REGISTRY_USER} ${CI_REGISTRY_PASSWORD} ${CI_PROJECT_DIR}"
-
-
-#   only:
-#     - main
-#     - merge_requests
+ 

@@ -1,0 +1,33 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend
+  namespace: std-ext-016-02
+  annotations:
+    cert-manager.io/cluster-issuer: "http01-clusterissuer"
+    kubernetes.io/ingress.class: "nginx"
+    #  nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - std-ext-016-02.k8s.praktikum-services.tech
+      secretName: std-ext-016-02-tls-secret
+  rules:
+    - host: std-ext-016-02.k8s.praktikum-services.tech
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8080

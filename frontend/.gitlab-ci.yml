@@ -1,83 +1,73 @@
+# frontend/.gitlab-ci.yml
 stages:
-  - build
-  - release
+  # - build
+  # - release
   - deploy
 
 variables:
   VERSION: "1.0.${CI_PIPELINE_ID}"
-  # VERSION: "1.0.2203532"
-  # DOCKER_IMAGE_NAME: "${CI_REGISTRY_IMAGE}/sausage-frontend:1.0.2199418"
   DOCKER_IMAGE_NAME: "${CI_REGISTRY_IMAGE}/sausage-frontend:${VERSION}"
+  NAMESPACE: std-ext-016-02
+  MANIFEST_DIR: kubernetes/frontend
 
 
-cache:
-  paths:
-    - frontend/node_modules/
-
-build:
-  stage: build
-  image:
-    name: gcr.io/kaniko-project/executor:v1.9.0-debug
-    entrypoint: [""]
-  script:
-    - echo "Building Docker image for frontend..."
-    - echo "${CI_REGISTRY_USER} ${CI_REGISTRY_PASSWORD} ${CI_PROJECT_DIR}"
-    - /kaniko/executor --context "${CI_PROJECT_DIR}/frontend" --dockerfile "${CI_PROJECT_DIR}/frontend/Dockerfile" --destination "${DOCKER_IMAGE_NAME}" --build-arg VERSION=${VERSION} --cache=true
-
-release:
-  stage: release
-  image:
-    name: gcr.io/go-containerregistry/crane:debug
-    entrypoint: [""]
-  before_script:
-    - crane auth login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
-  script:
-    - crane tag ${DOCKER_IMAGE_NAME} ${VERSION}
+# build-frontend:
+#   stage: build
+#   image:
+#     name: gcr.io/kaniko-project/executor:v1.9.0-debug
+#     entrypoint: [""]
+#   script:
+#     - echo "Сборка и пуш фронтенда..."
+#     - echo "${CI_REGISTRY_USER} ${CI_REGISTRY_PASSWORD} ${CI_PROJECT_DIR}"
+#     - /kaniko/executor --context "${CI_PROJECT_DIR}/frontend" --dockerfile "${CI_PROJECT_DIR}/frontend/Dockerfile" --destination "${DOCKER_IMAGE_NAME}" --build-arg VERSION=${VERSION} --cache=true
 
 
+ 
+# release:
+#   stage: release
+#   image:
+#     name: gcr.io/go-containerregistry/crane:debug
+#     entrypoint: [""]
+#   before_script:
+#     - crane auth login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+#   script:
+#     - crane tag ${DOCKER_IMAGE_NAME} ${VERSION}
 
-deploy:
+
+deploy-frontend:
   stage: deploy
-  image: docker:24.0.7-alpine3.19
+  image: alpine/k8s:1.31.12
   environment:
     name: production
-    url: http://std-ext-016-79.praktikum-services.tech
+    url: https://std-ext-016-02.k8s.praktikum-services.tech
   before_script:
-    # Установка SSH клиента (если нужен)
-    - apk add --no-cache openssh-client bash 
+    - apk add --no-cache openssh-client rsync
+
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY_DEPLOY" | tr -d '\r' | ssh-add -
     - mkdir -p /root/.ssh
     - chmod 700 /root/.ssh
     - echo "$SSH_KNOWN_HOSTS_DEPLOY" > /root/.ssh/known_hosts
     - chmod 600 /root/.ssh/known_hosts
-    - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "sudo mkdir -p ~${CI_PROJECT_DIR}"
-    - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "sudo mkdir -p ~${CI_PROJECT_DIR}/frontend/"
+    - echo "CI_PROJECT_DIR='${CI_PROJECT_DIR}'"
 
-
-
+    - mkdir  -p ~/.kube
+    - echo "$KUBECONFIG_CONTENT" | base64 -d > ~/.kube/config
+    - chmod 600 ~/.kube/config  
   script:
-    - cat ./frontend/default.conf
-    - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "sudo rm -rf ~${CI_PROJECT_DIR}/frontend/default.conf"
-    - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "sudo rm -rf ~${CI_PROJECT_DIR}/frontend/deploy.sh"
-    - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "sudo rm -rf ~${CI_PROJECT_DIR}/frontend/Dockerfile"
-    - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "sudo rm -rf ~${CI_PROJECT_DIR}/backend/docker-compose.yml || true"
-
-    - cat ./docker-compose.yml | ssh ${DEPLOY_USER}@${DEPLOY_HOST} "sudo tee ~${CI_PROJECT_DIR}/docker-compose.yml > /dev/null"
-
-    - cat ./frontend/default.conf | ssh ${DEPLOY_USER}@${DEPLOY_HOST} "sudo tee ~${CI_PROJECT_DIR}/frontend/default.conf > /dev/null"
-    - cat ./frontend/deploy.sh | ssh ${DEPLOY_USER}@${DEPLOY_HOST} "sudo tee ~${CI_PROJECT_DIR}/frontend/deploy.sh > /dev/null"
-    - cat ./frontend/Dockerfile | ssh ${DEPLOY_USER}@${DEPLOY_HOST} "sudo tee ~${CI_PROJECT_DIR}/frontend/Dockerfile > /dev/null"
-     # Создаём .env файл с переменными для docker-compose
-    - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "[ ! -f ~${CI_PROJECT_DIR}/.env ] && sudo touch ~${CI_PROJECT_DIR}/.env || true"
-
-    - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "echo 'FRONTEND_VERSION=${VERSION}' | sudo tee -a ~${CI_PROJECT_DIR}/.env > /dev/null"
-
-    - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "sudo chmod +x ~${CI_PROJECT_DIR}/frontend/deploy.sh"
-    - echo "${DOCKER_IMAGE_NAME}"
-    - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "~${CI_PROJECT_DIR}/frontend/deploy.sh ${DOCKER_IMAGE_NAME} ${VERSION} ${CI_REGISTRY_USER} ${CI_REGISTRY_PASSWORD} ${CI_PROJECT_DIR}"
+    - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "sudo rm -rf ~${CI_PROJECT_DIR}/kubernetes/frontend && sudo install -d -m 755 ~${CI_PROJECT_DIR}/kubernetes/frontend"
+    - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "ls -la ~${CI_PROJECT_DIR}/kubernetes/"
 
 
+    - cat ./kubernetes/frontend/configmap.yaml | ssh ${DEPLOY_USER}@${DEPLOY_HOST} "sudo tee ~${CI_PROJECT_DIR}/kubernetes/frontend/configmap.yaml   > /dev/null"
+    - cat ./kubernetes/frontend/service.yaml     | ssh ${DEPLOY_USER}@${DEPLOY_HOST} "sudo tee ~${CI_PROJECT_DIR}/kubernetes/frontend/service.yaml   > /dev/null"
+    - cat ./kubernetes/frontend/deployment.yaml  | ssh ${DEPLOY_USER}@${DEPLOY_HOST} "sudo tee ~${CI_PROJECT_DIR}/kubernetes/frontend/deployment.yaml > /dev/null"
+    - cat ./kubernetes/frontend/deployment.yaml  | ssh ${DEPLOY_USER}@${DEPLOY_HOST} "sudo tee ~${CI_PROJECT_DIR}/kubernetes/frontend/ingress.yaml > /dev/null"
+    - cat ./kubernetes/frontend/deployment.yaml  | ssh ${DEPLOY_USER}@${DEPLOY_HOST} "sudo tee ~${CI_PROJECT_DIR}/kubernetes/frontend/certificate.yaml > /dev/null"      
 
-    # - scp ./frontend/default.conf  ${DEPLOY_USER}@${DEPLOY_HOST}:/home/student/sausage-store/frontend/default.conf 
-    # - scp ./frontend/deploy.sh ${DEPLOY_USER}@${DEPLOY_HOST}:/home/student/sausage-store/frontend/
+    - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "echo "$KUBECONFIG_CONTENT" | base64 -d > ~/.kube/config"
+    - ssh ${DEPLOY_USER}@${DEPLOY_HOST} " chmod 600 ~/.kube/config    "
+    
+    - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "kubectl apply -f ~${CI_PROJECT_DIR}/kubernetes/frontend -n ${NAMESPACE}"
+    - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "kubectl set image deployment/frontend frontend=${DOCKER_IMAGE_NAME} -n ${NAMESPACE}"
+    - ssh ${DEPLOY_USER}@${DEPLOY_HOST} "kubectl rollout status deployment/frontend -n ${NAMESPACE} --timeout=120s"

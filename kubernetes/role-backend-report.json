@@ -1,0 +1,10 @@
+{
+  "role_type": "jwt",
+  "policies": ["backend-report-policy"],
+  "user_claim": "user_login",
+  "bound_claims": {
+    "project_path": "std-ext-016-02/sausage-store",
+    "ref": "main",
+    "ref_type": "branch"
+  }
+}

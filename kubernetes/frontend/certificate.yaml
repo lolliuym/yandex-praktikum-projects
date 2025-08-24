@@ -1,0 +1,14 @@
+# frontend/certificate.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: std-ext-016-02-tls
+  namespace: std-ext-016-02
+spec:
+  secretName: std-ext-016-02-tls-secret  # <- secret, который будет создан
+  issuerRef:
+    name: http01-clusterissuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+  dnsNames:
+    - std-ext-016-02.k8s.praktikum-services.tech

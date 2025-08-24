@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-report
+  namespace: std-ext-016-02
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-report
+  template:
+    metadata:
+      labels:
+        app: backend-report
+    spec:
+      containers:
+      - name: backend-report
+        image: gitlab.praktikum-services.ru:5050/std-ext-016-02/sausage-store/sausage-backend-report:1.0.2197822
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: db-password
+        - name: PORT
+          value: "8080"
+        - name: SPRING_DATA_MONGODB_URI
+          value: "mongodb://std-ext-016-02:Testusr1234@rc1a-udg79n2h293n1hdk.mdb.yandexcloud.net:27018/std-ext-016-02?tls=true"
+      imagePullSecrets:
+      #- name: docker-config-secret
+      - name: gitlab-registry

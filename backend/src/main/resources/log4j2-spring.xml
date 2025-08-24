@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Properties>
+        <Property name="report-path">${env:REPORT_PATH:-/tmp}</Property>
+        <Property name="log-path">${env:LOG_PATH:-/tmp}</Property>
+    </Properties>
+
+    <Appenders>
+        <Console name="Console-Appender" target="SYSTEM_OUT">
+            <PatternLayout pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"/>
+        </Console>
+
+        <RollingFile name="RollingFileReport-Appender"
+                     fileName="${report-path}/report.txt"
+                     filePattern="${report-path}/report-%d{yyyy-MM-dd-HH-mm}.gz">
+            <PatternLayout pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="1 KB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="5"/>
+        </RollingFile>
+
+        <RollingFile name="RollingFile-Appender"
+                     fileName="${log-path}/app.log"
+                     filePattern="${log-path}/app-%d{yyyy-MM-dd-HH-mm}.gz">
+            <PatternLayout pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="1 KB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="5"/>
+        </RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <Logger name="ReportGenerator" level="info" additivity="false">
+            <AppenderRef ref="RollingFileReport-Appender"/>
+        </Logger>
+
+        <Root level="info">
+            <AppenderRef ref="Console-Appender"/>
+            <AppenderRef ref="RollingFile-Appender"/>
+        </Root>
+    </Loggers>
+</Configuration>

@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  frontend:
+    image: "${CI_REGISTRY_IMAGE}/sausage-frontend:${FRONTEND_VERSION}"
+    container_name: sausage-frontend
+    ports:
+      - "80:80"
+    networks:
+      - sausage-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+
+
+  backend:
+    image: "${CI_REGISTRY_IMAGE}/sausage-backend:${BACKEND_VERSION}"
+    container_name: sausage-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_USERNAME: "${SPRING_DATASOURCE_USERNAME}"
+      SPRING_DATASOURCE_PASSWORD: "${SPRING_DATASOURCE_PASSWORD}"
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://${SPRING_DATASOURCE_HOST}:${SPRING_DATASOURCE_PORT}/${SPRING_DATASOURCE_DATABASE}?ssl=true&sslmode=require"
+      SPRING_DATA_MONGODB_URI: "${REPORTS_MONGODB_URI}"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - sausage-network
+
+  backend-blue:
+    extends:
+      service: backend
+    container_name: sausage-backend-blue
+
+  backend-green:
+    extends:
+      service: backend
+    container_name: sausage-backend-green
+
+  backend-report:
+    image: "${CI_REGISTRY_IMAGE}/sausage-backend-report:1.0.2197822"
+    container_name: sausage-backend-report
+    ports:
+      - "8082:8080"
+    environment:
+      SPRING_DATA_MONGODB_URI: "${REPORTS_MONGODB_URI}"
+      SPRING_DATASOURCE_PASSWORD: "${SPRING_DATASOURCE_PASSWORD}"
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://${SPRING_DATASOURCE_HOST}:${SPRING_DATASOURCE_PORT}/${SPRING_DATASOURCE_DATABASE}?ssl=true&sslmode=require"
+    networks:
+      - sausage-network
+      - default
+
+networks:
+  sausage-network:
+    name: sausage_network
+    external: true

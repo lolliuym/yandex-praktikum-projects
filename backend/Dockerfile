@@ -1,49 +1,41 @@
-# === Stage 1: Сборка ===
-FROM maven:3.8-openjdk-16 AS builder
-WORKDIR /app
-COPY pom.xml .
-COPY src src
-ARG VERSION
-RUN mvn package -Dversion.application=${VERSION}
+# берём базовый образ, содержащий утилиту maven и jdk для сборки java-проекта
+FROM maven:3.8.2-openjdk-16-slim
 
-# === Stage 2: Запуск ===
-FROM eclipse-temurin:17-jre
+# сделали переменную VERSION, она нам понадобится, чтобы передавать при сборке образа версию сосисочного бэкенда
+ARG VERSION=0.0.${VERSION}
 
-# Установка утилит
-RUN apt update && \
-    apt install -y curl dumb-init && \
-    apt clean && \
-    rm -rf /var/lib/apt/lists/*
+# копируем исходники сосисочного бэкенда в создаваемый образ
+WORKDIR /root
+COPY ./src ./src
+COPY *.xml ./
 
-# Создание пользователя
-# Создание пользователя с домашней директорией
-RUN addgroup --system jaruser && \
-    adduser --system --shell /bin/false --ingroup jaruser --home /home/jaruser jaruser
+# собираем бэкенд сосисочной
+# после этой команды в папке target создастся jar-файл с сервсисом сосисочного бэкенда
+RUN mvn package -Dversion.application=0.0.${VERSION}
 
-# Скачиваем CA-сертификат
-RUN mkdir -p /usr/local/share/ca-certificates && \
-    curl -L https://storage.yandexcloud.net/cloud-certs/CA.pem \
-    -o /usr/local/share/ca-certificates/YandexInternalRootCA.crt
+# копируем CA-сертификат Яндекса в образ
+RUN curl https://storage.yandexcloud.net/cloud-certs/CA.pem -o YandexInternalRootCA.crt
 
-# Импорт в Java truststore
-RUN $JAVA_HOME/bin/keytool -importcert -trustcacerts -alias yandex \
-    -keystore $JAVA_HOME/lib/security/cacerts \
-    -storepass changeit -file /usr/local/share/ca-certificates/YandexInternalRootCA.crt -noprompt
+# подкидываем CA-сертификат Яндекса в хранилище сертификатов для Java,
+# создаём пользователя jaruser,
+# устанавливаем утилиту dumb-init,
+# копируем собранный артефакт в папку /app
+RUN keytool -importcert -file YandexInternalRootCA.crt \
+    -alias yandex -cacerts -storepass changeit -noprompt \
+    && rm YandexInternalRootCA.crt \
+    && addgroup --system jaruser \
+    && adduser --system --shell /bin/false -group jaruser \
+    && apt update && apt install dumb-init && apt clean \
+    && mkdir /app \
+    && ls -la target \
+    && echo "Версия приложения: ${VERSION}" \
+    && cp ./target/sausage-store-0.0.${VERSION}.jar /app/sausage-store.jar
 
-# Создаём директорию для PostgreSQL и копируем сертификат
-RUN mkdir -p /home/jaruser/.postgresql && \
-    cp /usr/local/share/ca-certificates/YandexInternalRootCA.crt /home/jaruser/.postgresql/root.crt && \
-    chown -R jaruser:jaruser /home/jaruser/.postgresql && \
-    chmod 600 /home/jaruser/.postgresql/root.crt
+# директива EXPOSE не открывает порт, а лишь указывает, что приложение работает на этом порту
+EXPOSE 8080
 
-# Рабочая директория
-WORKDIR /app
-COPY --from=builder /app/target/*.jar app.jar
-
-# Смена пользователя
+# приложение будет запускаться под пользователем jaruser
 USER jaruser
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
-  CMD curl -f http://localhost:8080/actuator/health || exit 1
-
-ENTRYPOINT ["dumb-init", "java", "-jar", "app.jar"]
+# устанавливаем точку входа, вернее ту команду, которая запустится при старте контейнера
+ENTRYPOINT ["dumb-init", "java", "-jar", "-Dmyserver.bindPort=8080", "/app/sausage-store.jar"]

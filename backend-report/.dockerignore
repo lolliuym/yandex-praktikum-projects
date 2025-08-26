@@ -1,4 +1,0 @@
-.gitlab-ci.yml
-target/
-.env
-Dockerfile

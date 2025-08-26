@@ -14,11 +14,10 @@ services:
       timeout: 5s
       retries: 3
 
-
-
-  backend:
+  backend-blue:
     image: "${CI_REGISTRY_IMAGE}/sausage-backend:${BACKEND_VERSION}"
-    container_name: sausage-backend
+    container_name: sausage-backend-blue
+    # Порт 8080 только у активного контейнера
     ports:
       - "8080:8080"
     environment:
@@ -26,23 +25,38 @@ services:
       SPRING_DATASOURCE_PASSWORD: "${SPRING_DATASOURCE_PASSWORD}"
       SPRING_DATASOURCE_URL: "jdbc:postgresql://${SPRING_DATASOURCE_HOST}:${SPRING_DATASOURCE_PORT}/${SPRING_DATASOURCE_DATABASE}?ssl=true&sslmode=require"
       SPRING_DATA_MONGODB_URI: "${REPORTS_MONGODB_URI}"
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 8
+      LOG_PATH: /tmp
+      REPORT_PATH: /tmp
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
+      start_period: 60s
     networks:
       - sausage-network
 
-  backend-blue:
-    extends:
-      service: backend
-    container_name: sausage-backend-blue
-
   backend-green:
-    extends:
-      service: backend
+    image: "${CI_REGISTRY_IMAGE}/sausage-backend:${BACKEND_VERSION}"
     container_name: sausage-backend-green
+    # НЕ пробрасываем порт 8080 — только для проверки
+    environment:
+      SPRING_DATASOURCE_USERNAME: "${SPRING_DATASOURCE_USERNAME}"
+      SPRING_DATASOURCE_PASSWORD: "${SPRING_DATASOURCE_PASSWORD}"
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://${SPRING_DATASOURCE_HOST}:${SPRING_DATASOURCE_PORT}/${SPRING_DATASOURCE_DATABASE}?ssl=true&sslmode=require"
+      SPRING_DATA_MONGODB_URI: "${REPORTS_MONGODB_URI}"
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 8
+      LOG_PATH: /tmp
+      REPORT_PATH: /tmp
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      - sausage-network
 
   backend-report:
     image: "${CI_REGISTRY_IMAGE}/sausage-backend-report:1.0.2197822"
@@ -55,7 +69,6 @@ services:
       SPRING_DATASOURCE_URL: "jdbc:postgresql://${SPRING_DATASOURCE_HOST}:${SPRING_DATASOURCE_PORT}/${SPRING_DATASOURCE_DATABASE}?ssl=true&sslmode=require"
     networks:
       - sausage-network
-      - default
 
 networks:
   sausage-network:

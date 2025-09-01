@@ -23,7 +23,8 @@ public class ReportSaverTask {
         this.reportRepository = reportRepository;
     }
 
-    @Scheduled(fixedDelay = 60000)
+     @Scheduled(fixedDelay = 300000)
+ 
     public void saveReport() {
         log.info("Saving report");
         Report report =

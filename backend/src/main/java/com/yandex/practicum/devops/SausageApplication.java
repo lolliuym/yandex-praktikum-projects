@@ -27,5 +27,4 @@ public class SausageApplication {
             productService.save(new Product(6L, "Американская", 189.00, "https://storage.yandexcloud.net/s3-std-ext-016-02/1.jpg"));
         };
     }
-}
  

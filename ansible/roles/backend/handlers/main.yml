@@ -1,0 +1,6 @@
+---
+- name: Restart backend service
+  systemd:
+    name: sausage-store-backend
+    state: restarted
+  become: yes

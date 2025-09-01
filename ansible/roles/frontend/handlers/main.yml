@@ -1,0 +1,6 @@
+---
+- name: restart frontend
+  systemd:
+    name: sausage-store-frontend
+    state: restarted
+  become: yes

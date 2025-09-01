@@ -1,0 +1,106 @@
+---
+- name: Update apt
+  apt:
+    update_cache: yes
+  become: true
+
+- name: Add NodeSource GPG key (новый метод)
+  ansible.builtin.apt_key:
+    url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+    state: present
+  become: yes
+
+- name: Add NodeSource repo через apt_repository (правильный формат)
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_16.x nodistro main"
+    state: present
+    filename: nodesource
+  become: yes
+
+- name: Install NodeJs and npm с зависимостями
+  ansible.builtin.apt:
+    pkg:
+      - nodejs
+      - acl
+    state: present
+    update_cache: yes
+  become: true
+
+- name: Install http-server (исправленный модуль)
+  community.general.npm:
+    name: http-server
+    global: yes
+  become: yes
+
+- name: Configure system user
+  ansible.builtin.user:
+    name: www-data
+    shell: /usr/sbin/nologin
+    system: yes
+    create_home: no
+  become: yes
+
+- name: Create frontend directory structure
+  ansible.builtin.file:
+    path: /var/www-data/frontend
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: '0755'
+  become: yes
+
+- name: Download frontend artifact
+  ansible.builtin.get_url:
+    url: "{{ nexus_url }}/repository/std-ext-016-02-frontend/1.0.1904574/sausage-store-1.0.1904574.tar.gz"
+    dest: /var/www-data/frontend.tar.gz
+    mode: '0644'
+    url_username: "{{ nexus_auth.url_username }}"
+    url_password: "{{ nexus_auth.url_password }}"
+  become: yes
+
+- name: Extract frontend files (с правильным путём)
+  ansible.builtin.unarchive:
+    src: /var/www-data/frontend.tar.gz
+    dest: /var/www-data/frontend
+    remote_src: yes
+    extra_opts: "--strip-components=1"
+    owner: www-data
+    group: www-data
+  become: yes
+
+- name: Install authbind
+  ansible.builtin.apt:
+    name: authbind
+    state: present
+  become: yes
+
+- name: Configure authbind port 80
+  ansible.builtin.file:
+    path: /etc/authbind/byport/80
+    state: touch
+    mode: '0755'
+    owner: www-data
+    group: www-data
+  become: yes
+
+- name: Deploy systemd service
+  ansible.builtin.template:
+    src: templates/sausage-store-frontend.service.j2
+    dest: /etc/systemd/system/sausage-store-frontend.service
+    mode: '0644'
+  become: yes
+  notify: restart frontend
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: yes
+  become: yes
+
+- name: Enable frontend service
+  ansible.builtin.service:
+    name: sausage-store-frontend
+    state: started
+    enabled: yes
+  become: yes
+  notify: restart frontend
+

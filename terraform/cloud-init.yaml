@@ -1,0 +1,19 @@
+#cloud-config
+users:
+  - default
+  - name: ansible
+    primary_group: ansible
+    groups: sudo
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: false
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDE9YOXXg28GsaJk0GbOlEd6VZZPK2Yls/Qp1pdkZaT92N7gJSpm73ynjBozvkHAr0zZ9+xphjl5Nv6dRZJfFbVNbr/Oi3C2OpjyjeUHsgw0+8uNld5cfdtIqLRGUT7c4pomkurVltrYLImk4XsOz8CCHSw8cwiS5z8u5c9ZvoFXo5jfI+A0ViOXms1Ff0k0UXDuEKfM+eIuHYKFwekdKYcYnzMUY5iTMu+wA4+fbwsa3rVP4AzvlSn6kL/3lgYHixsRKjWDNngHVQBNXWslhnw/BCnrv4k4j9dtZkk1TnYmIXi8tWTG8y1wDAwaJ8vUVe2IZJRrdmnfctdIRc4TpBvUlTO3A5sG1jnLBTR7Y++bfb4m9+5I0GUloFp89JHYBoEURMuwbUyHdiCZtqWDbEMyMtygIIcqEn5YI7JaUE2KJmbsN0ke3jOCoujUcN28z+1KxwiBM56csGIEPtlQKOMIy4jzTk9rmsXB1jE4MF3/A/1+sX17/x/DDA8GfoxFt0= valeryanestiadi@yandex.ru
+ 
+
+groups:
+  - ansible
+
+
+runcmd:
+  - echo "External IP: $(curl -s ifconfig.me)" > /tmp/instance_info.log

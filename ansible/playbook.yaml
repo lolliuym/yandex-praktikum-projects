@@ -1,0 +1,19 @@
+---
+- name: Deploy backend service on VM
+  hosts: dev
+  vars_files:
+    - group_vars/backend.yml
+    - group_vars/all.yml
+  roles:
+    - backend
+  become: yes
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+- name: Deploy frontend service on VM
+  hosts: dev
+  vars_files:
+    - group_vars/frontend.yml
+    - group_vars/all.yml
+  roles:
+    - frontend

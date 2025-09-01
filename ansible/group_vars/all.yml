@@ -1,0 +1,5 @@
+vm_ip_address: "130.193.48.236"
+nexus_url: "https://nexus.praktikum-services.tech"
+nexus_auth:
+  url_username: "std-ext-016-02"
+  url_password: "2fJgU75e"

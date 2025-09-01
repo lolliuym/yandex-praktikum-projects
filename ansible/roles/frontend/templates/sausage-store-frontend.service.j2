@@ -1,0 +1,19 @@
+[Unit]
+Description=Sausage Store Frontend Service
+After=network.target
+
+[Service]
+User={{ frontend_service_user }}
+Group={{ frontend_service_user }}
+WorkingDirectory={{ frontend_deploy_path }}/frontend
+
+ExecStart=/usr/bin/authbind --deep /usr/bin/http-server . -p 80 --proxy http://localhost:8080
+Restart=always
+Restart=on-failure
+RestartSec=10s
+
+
+
+[Install]
+WantedBy=multi-user.target
+

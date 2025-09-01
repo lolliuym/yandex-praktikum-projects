@@ -1,0 +1,18 @@
+[Unit]
+Description=Sausage-store
+
+[Service]
+User=jarservice
+Environment=REPORT_PATH=/var/sausage-store/reports
+Environment=LOG_PATH=/var/sausage-store/logs
+Restart=always
+ExecStart=/usr/bin/java \
+-Dmyserver.basePath='/home/jarservice/' \
+-Dmyserver.bindAddr='127.0.0.1' \
+-Dmyserver.bindPort='8080' \
+-Dmyserver.hostName='Sausage-store' \
+-jar '/home/jarservice/sausage-store.jar'
+SuccessExitStatus=143
+
+[Install]
+WantedBy=multi-user.target

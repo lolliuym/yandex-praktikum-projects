@@ -1,0 +1,39 @@
+[Unit]
+Description=Sausage Store Backend Service
+After=network.target
+
+[Service]
+User={{ backend_service_user }}
+Group={{ backend_service_user }}
+WorkingDirectory={{ backend_lib_directory }}
+StandardOutput=file:{{ backend_lib_directory }}/log/sausage-store.log
+StandardError=file:{{ backend_lib_directory }}/log/sausage-store.log
+
+# Переменные для подключения к PostgreSQL
+Environment=PSQL_USER="std-ext-016-02"
+Environment=PSQL_PASSWORD="Testusr1234"
+Environment=PSQL_HOST="rc1a-vdrnhudsvsfj80g8.mdb.yandexcloud.net"
+Environment=PSQL_DBNAME="std-ext-016-02"
+Environment=PSQL_PORT="6432"
+Environment=SPRING_DATASOURCE_URL="jdbc:postgresql://${PSQL_HOST}:${PSQL_PORT}/${PSQL_DBNAME}?ssl=true"
+Environment=SPRING_DATASOURCE_USERNAME="${PSQL_USER}"
+Environment=SPRING_DATASOURCE_PASSWORD="${PSQL_PASSWORD}"
+
+# Переменные для подключения к MongoDB
+Environment=MONGO_USER="std-ext-016-02"
+Environment=MONGO_PASSWORD="Testusr1234"
+#Environment=MONGO_HOST="rc1a-vdrnhudsvsfj80g8.mdb.yandexcloud.net"
+Environment=MONGO_HOST="rc1a-udg79n2h293n1hdk.mdb.yandexcloud.net"
+Environment=MONGO_DATABASE="std-ext-016-02"
+
+Environment=SPRING_DATA_MONGODB_URI="mongodb://${MONGO_USER}:${MONGO_PASSWORD}@${MONGO_HOST}:27018/${MONGO_DATABASE}?tls=true"
+
+ExecStart=/usr/bin/java \
+#   -Djavax.net.ssl.trustStore=/home/ansible/YATrustStore \
+#   -Djavax.net.ssl.trustStorePassword=superpass \
+   -jar {{ backend_lib_directory }}/sausage-store-backend.jar
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+

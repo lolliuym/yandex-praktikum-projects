@@ -1,0 +1,5 @@
+frontend_version: "1.0.1904574"
+frontend_service_user: "www-data"
+frontend_deploy_path: "/var/www-data"
+frontend_report_path: "/var/sausage-store/reports"
+frontend_log_path: "/var/sausage-store/logs"

@@ -1,0 +1,102 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  become: yes
+  register: apt_update_result
+  retries: 3
+  delay: 10
+  until: >
+    apt_update_result is not failed or retry_count == 3
+  ignore_errors: yes
+
+- name: Check connectivity to Ubuntu repo
+  shell: |
+    echo "Testing connection to archive.ubuntu.com"
+    curl -s --head http://archive.ubuntu.com/ubuntu/dists/ | head -n 1
+  register: curl_output
+  ignore_errors: yes
+  changed_when: false
+
+- name: Show HTTP status code
+  debug:
+    msg: "{{ curl_output.stdout }}" 
+  
+- name: Install OpenJDK 17
+  apt:
+    name: openjdk-17-jdk
+    state: present
+  become: yes
+
+- name: Create service user
+  user:
+    name: "{{ backend_service_user }}"
+    system: yes
+    create_home: no
+    shell: /sbin/nologin
+  become: yes
+
+- name: Ensure backend directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ backend_service_user }}"
+    group: "{{ backend_service_user }}"
+    mode: '0755'
+  loop:
+    - "{{ backend_lib_directory }}"
+    - "{{ backend_report_directory }}"
+    - "{{ backend_lib_directory }}/log"
+  become: yes
+
+- name: Download backend artifact
+  get_url:
+    url: "{{ nexus_url }}/repository/std-ext-016-02-backend/com/yandex/practicum/devops/sausage-store/{{ backend_maven_version }}/sausage-store-{{ backend_maven_version }}.jar"
+    dest: "{{ backend_lib_directory }}/sausage-store-backend.jar"
+    mode: '0644'
+    url_username: "{{ nexus_auth.url_username }}"
+    url_password: "{{ nexus_auth.url_password }}"
+  become: yes
+
+- name: Deploy systemd service
+  template:
+    src: templates/sausage-store-backend.service.j2
+    dest: /etc/systemd/system/sausage-store-backend.service
+    mode: '0644'
+  become: yes
+  notify: Restart backend service
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: yes
+  become: yes
+
+- name: Enable and start backend service
+  service:
+    name: sausage-store-backend
+    state: started
+    enabled: yes
+  become: yes
+
+
+- name: Reload systemd daemon after unit changes
+  command: systemctl daemon-reload
+  become: yes
+
+- name: Restart backend service
+  service:
+    name: sausage-store-backend
+    state: restarted
+  become: yes
+
+- name: Check status of backend service
+  command: systemctl status sausage-store-backend
+  register: service_status
+  ignore_errors: yes
+  become: yes
+
+- name: Show service status output
+  debug:
+    msg: "{{ service_status.stdout }}"
+  when: service_status.stdout != ""

@@ -1,0 +1,14 @@
+all:
+  vars:
+    dev_server_ip: "158.160.52.167"
+    ansible_connection: ssh
+
+  children:
+    dev:
+      hosts:
+        dev-server:   
+          ansible_host: "{{ dev_server_ip }}"
+          ansible_user: ansible
+          ansible_become: yes
+          ansible_private_key_file: ~/.ssh/tf-cloud-init
+          ansible_python_interpreter: /usr/bin/python3

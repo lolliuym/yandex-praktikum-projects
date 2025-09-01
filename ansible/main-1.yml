@@ -1,0 +1,120 @@
+---
+- name: Update apt
+  apt:
+     update_cache: yes
+  become: true
+
+- name: Ansible shell module multiple commands
+  shell: "curl -fsSL https://deb.nodesource.com/setup_16.x | bash -"
+  become: true
+
+- name: Add NodeSource GPG key
+  apt_key:
+    url: https://deb.nodesource.com/gpgkey/nodesource.gpg.key
+    state: present
+  become: yes
+
+- name: Add NodeSource repo for Node.js
+  apt_repository:
+    repo: "deb https://deb.nodesource.com/node_16.x focal main"
+    state: present
+    filename: nodesource
+  become: yes
+
+- name: Install NodeJs and npm
+  apt:
+    pkg:
+    - nodejs
+    - acl
+    state: present
+  become: true
+
+- name: Install "http-server" npm package.
+  community.general.npm:
+    name: http-server
+    global: yes
+  become: yes
+
+- name: Create service user for frontend
+  user:
+    name: www-data
+    system: yes
+    create_home: no
+  become: yes
+
+- name: Create directory for frontend files
+  file:
+    path: /var/www-data/
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: '0755'
+  become: yes
+
+- name: Ensure /var/www-data is writable by www-data
+  file:
+    path: /var/www-data/
+    owner: www-data
+    group: www-data
+    mode: '0755'
+    state: directory
+  become: yes
+
+- name: Download frontend artifact from Nexus
+  get_url:
+    url: "{{ nexus_url }}/repository/std-ext-016-02-frontend/1.0.1904574/sausage-store-1.0.1904574.tar.gz"
+    dest: /var/www-data/frontend.tar.gz
+    mode: '0644'
+    url_username: "{{ nexus_auth.url_username }}"
+    url_password: "{{ nexus_auth.url_password }}"
+  become: yes
+
+- name: Unarchive frontend artifact
+  unarchive:
+    src: /var/www-data/frontend.tar.gz
+    dest: /var/www-data/
+    remote_src: yes
+  become: yes
+
+- name: Install authbind
+  apt:
+    name: authbind
+    state: present
+    update_cache: yes
+  become: yes
+
+- name: Configure authbind for port 80
+  file:
+    path: /etc/authbind/byport/80
+    state: touch
+    mode: '0755'
+    owner: www-data
+    group: www-data
+  become: yes
+
+- name: Configure systemd service for frontend
+  template:
+    src: templates/sausage-store-frontend.service.j2
+    dest: /etc/systemd/system/sausage-store-frontend.service
+    mode: '0644'
+  become: yes
+  notify: restart frontend
+
+- name: Reload systemd daemon for frontend service
+  systemd:
+    daemon_reload: yes
+  become: yes
+
+- name: Enable and start frontend service
+  service:
+    name: sausage-store-frontend
+    state: started
+    enabled: yes
+  become: yes
+  notify: restart frontend
+
+  #- name: Clean apt cache
+  #  apt:
+  #    autoclean: yes
+  #  become: yes
+

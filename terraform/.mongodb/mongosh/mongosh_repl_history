@@ -1,0 +1,38 @@
+exit
+show collections
+use std-ext-016-02
+show dbs
+})
+  // другие поля
+  name: "Product Name",
+  _id: getNextSequence("productid"),
+db.product.insertOne({
+function getNextSequence(name) { var ret = db.counters.findAndModify({ query: { _id: name }, update: { $inc: { seq: 1 } }, new: true, upsert: true }); return ret.seq; }
+db.counters.insertOne({ _id: "productid", seq: 0 })
+db.counters.find()
+db.product.insertOne({ _id: getNextSequence("productid"), name: "Product Name" /* ... другие поля*/ });
+function getNextSequence(name) { var ret = db.counters.findOneAndUpdate( { _id: name }, { $inc: { seq: 1 } }, { returnDocument: "after", upsert: true } ); return ret.value.seq; }
+db.counters.insertOne({ _id: "productid", seq: 0 })
+db.createCollection("counters")
+db.product.insertOne({ _id: getNextSequence("productid"), /* автоинкрементный числовой ID*/ name: "Сливочная", picture_url: "https://res.cloudinary.com/sugrobov/image/upload/v1623323635/repos/sausages/6.jpg", price: 320 });
+db.counters.insertOne({ _id: "productid", /* уникальный идентификатор счётчика для коллекции product*/ seq: 0 /* начальное значение счётчика*/ });
+db.product.insertOne({ _id: getNextSequence("productid"), /* автоинкрементный числовой ID*/ name: "Сливочная", picture_url: "https://res.cloudinary.com/sugrobov/image/upload/v1623323635/repos/sausages/6.jpg", price: 320 });
+exit
+db.product.find()
+show collections
+db.getCollectionNames().includes("product")
+db
+use std-ext-016-02
+show dbs
+shows dbs
+use
+print("Количество документов в коллекции 'product':", count);
+const count = db.product.countDocuments();
+if (collections.includes("product")) { print("Коллекция 'product' существует"); } else { print("Коллекция 'product' не найдена"); }
+const collections = db.getCollectionNames();
+use "std-ext-016-02"
+show dbs
+use std-ext-016-02
+show dbs
+\d
+exit
